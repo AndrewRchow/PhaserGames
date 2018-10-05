@@ -1,6 +1,7 @@
 var game = new Phaser.Game(400 , 490, Phaser.AUTO);
 
 var globalHighScore = 0;
+var globalFirstGame = true;
 
 var GameState = {
     //where assets loaded
@@ -25,24 +26,26 @@ var GameState = {
         this.whackSound = game.add.audio('whack');
         this.whackSound.volume = 0.2;
 
+        
         this.box = game.add.sprite(100, 245, 'box');
-        game.physics.arcade.enable(this.box);
-        this.box.body.gravity.y = 900;
         this.box.anchor.setTo(-0.2, 0.5);
         this.box.alive=true;
-
-        this.pipes = game.add.group();      
-        this.timer = game.time.events.loop(1500, this.addRowOfPipes, this);
+        game.physics.arcade.enable(this.box);
 
         this.score = 0;
         this.labelScore = game.add.text(20,20, "0", { font: "30px Arial", fill: "#ffffff" });
         this.labelHighScoreText = game.add.text(190,19, "High Score: ", { font: "30px Arial", fill: "#ffffff" });
         this.labelHighScore = game.add.text(355,20, globalHighScore, { font: "30px Arial", fill: "#ffffff" });
-        this.waitIncreaseScore = game.time.events.add(3200, this.timerIncreaseScore, this);  
 
         // var spaceKey = game.input.keyboard.addKey(Phaser.Keyboard.SPACEBAR);
         // spaceKey.onDown.add(this.jump, this);
-        game.input.onDown.add(this.jump, this);
+
+        if(globalFirstGame){
+            this.startText = game.add.text(185,230, "START", { font: "30px Arial", fill: "#ffffff" });
+            game.input.onDown.add(this.startGame, this);
+        } else {
+          this.startGame();
+        }
     },
     //keeps going during game
     update: function() {
@@ -52,8 +55,24 @@ var GameState = {
 
         game.physics.arcade.overlap(this.box, this.pipes, this.hitPipe, null, this);
 
-        if (this.box.angle < 20 && this.box.alive==true)
+        if (this.box.angle < 20 && this.box.alive && !globalFirstGame)
             this.box.angle += 1; 
+    },
+
+    startGame: function() {
+        if(globalFirstGame)
+            game.world.remove(this.startText);
+
+        this.box.body.gravity.y = 900;
+        this.pipes = game.add.group();      
+        this.timer = game.time.events.loop(1500, this.addRowOfPipes, this);
+
+        this.waitIncreaseScore = game.time.events.add(3200, this.timerIncreaseScore, this);  
+        game.input.onDown.remove(this.startGame, this);
+        game.input.onDown.add(this.jump, this);
+        this.jump();
+
+        globalFirstGame = false;
     },
 
     hitPipe: function() {
@@ -126,6 +145,9 @@ var GameState = {
                 this.addOnePipe(400, i*60+10);
         }
         this.box.bringToTop();
+        this.labelHighScore.bringToTop();
+        this.labelHighScoreText.bringToTop();
+        this.labelScore.bringToTop();
     },
 
     timerIncreaseScore: function() {
